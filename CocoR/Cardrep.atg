@@ -1,0 +1,36 @@
+COMPILER Cardrep
+
+CHARACTERS
+  letter = 'A'..'Z' + 'a'..'z'.
+  digit = '0'..'9'.
+  
+TOKENS
+  ident = letter {letter | digit}.
+  number = digit {digit}.
+
+IGNORE '\r' + '\n' + '\t' + ' '
+
+PRODUCTIONS
+
+Cardrep = 
+  "JUEGO" ident
+  Estado
+  "PREDECIR" "jugada"
+  .
+
+Estado =
+  "MANO_JUGADOR" "[" ListaCartas "]"
+  "MANO_DEALER" "[" ListaCartas "]"
+  .
+
+ListaCartas = Carta {"," Carta}.
+
+Carta = 
+  ValorCarta "_" ident
+  .
+
+ValorCarta = 
+  number | ident
+  .
+
+END Cardrep.

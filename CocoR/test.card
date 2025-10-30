@@ -1,0 +1,6 @@
+JUEGO Blackjack
+
+MANO_JUGADOR [7_corazones,8_picas]
+MANO_DEALER [9_treboles,A_diamantes]
+
+PREDECIR jugada

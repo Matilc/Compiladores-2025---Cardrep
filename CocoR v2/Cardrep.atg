@@ -1,0 +1,52 @@
+COMPILER Cardrep
+
+CHARACTERS
+  letter = 'A'..'Z' + 'a'..'z'.
+  digit = '0'..'9'.
+  
+TOKENS
+  ident = letter {letter | digit}.
+  number = digit {digit}.
+
+IGNORE '\r' + '\n' + '\t' + ' '
+
+PRODUCTIONS
+
+Cardrep = 
+  "JUEGO" ident              (. gameType = wcharToString(t->val); .)
+  Estado
+  "PREDECIR" "jugada"
+  .
+
+Estado =
+  "MANO_JUGADOR" "[" ListaCartasJugador "]"
+  "MANO_DEALER" "[" ListaCartasDealer "]"
+  .
+
+ListaCartasJugador = 
+  CartaJugador {"," CartaJugador}
+  .
+
+ListaCartasDealer = 
+  CartaDealer {"," CartaDealer}
+  .
+
+CartaJugador = 
+  ValorCarta                 (. std::string valor = wcharToString(t->val); .)
+  "_" 
+  ident                      (. std::string palo = wcharToString(t->val); 
+                                 playerCards.push_back(valor + "_" + palo); .)
+  .
+
+CartaDealer = 
+  ValorCarta                 (. std::string valor = wcharToString(t->val); .)
+  "_" 
+  ident                      (. std::string palo = wcharToString(t->val); 
+                                 dealerCards.push_back(valor + "_" + palo); .)
+  .
+
+ValorCarta = 
+  number | ident
+  .
+
+END Cardrep.
