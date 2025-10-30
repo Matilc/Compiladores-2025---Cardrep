@@ -60,20 +60,21 @@ string predecirJugada(const vector<string>& jugador, const vector<string>& deale
     cout << "  Suma jugador: " << sumaJugador << endl;
     cout << "  Carta visible dealer: " << cartaVisibleDealer << endl << endl;
     
-    // Estrategia básica de Blackjack
-    if (sumaJugador >= 17) {
-        return "PLANTARSE - Suma alta, riesgo de pasarse";
+    if (sumaJugador > 21) {
+        return "PERDISTE - No hay siguiente movimiento";
+    } else if (sumaJugador >= 17) {
+        return "Recomendacion: PLANTARSE - Suma alta, riesgo de pasarse";
     } else if (sumaJugador <= 11) {
-        return "PEDIR - Es imposible pasarse";
+        return "Recomendacion: PEDIR - Es imposible pasarse";
     } else if (sumaJugador >= 12 && sumaJugador <= 16) {
         if (cartaVisibleDealer >= 7) {
-            return "PEDIR - Dealer tiene carta alta";
+            return "Recomendacion: PEDIR - Dealer tiene carta alta";
         } else {
-            return "PLANTARSE - Dealer puede pasarse";
+            return "Recomendacion: PLANTARSE - Dealer puede pasarse";
         }
     }
     
-    return "PEDIR - Jugada estándar";
+    return "Recomendación: PEDIR - Jugada estándar";
 }
 
 int main(int argc, char* argv[]) {
@@ -86,18 +87,15 @@ int main(int argc, char* argv[]) {
     
     wchar_t* fileName = coco_string_create(L"test.card");
     
-    cout << "=== Cardrep - Blackjack Predictor ===" << endl;
-    cout << "Parseando archivo: test.card" << endl << endl;
+    cout << "=== Cardrep - Card Game Predictor ===" << endl;
     
     Scanner* scanner = new Scanner(fileName);
     Parser* parser = new Parser(scanner);
     
     parser->Parse();
     
-    if (parser->errors->count == 0) {
-        cout << "✓ Parsing exitoso!" << endl << endl;
-        
-        cout << "--- ANALISIS DE BLACKJACK ---" << endl;
+    if (parser->errors->count == 0) {     
+        cout << "--- ANALISIS ---" << endl;
         cout << "Juego: " << gameType << endl;
         cout << "Mano jugador: ";
         for (const auto& carta : playerCards) {
@@ -113,7 +111,7 @@ int main(int argc, char* argv[]) {
         
         // PREDICCIÓN REAL
         string recomendacion = predecirJugada(playerCards, dealerCards);
-        cout << "RECOMENDACION: " << recomendacion << endl;
+        cout << recomendacion << endl;
         
     } else {
         cout << "✗ ERROR: " << parser->errors->count << " errores" << endl;
