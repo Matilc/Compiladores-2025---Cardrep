@@ -1,8 +1,8 @@
 JUEGO Truco
 
-TRUCO_JUGADOR [7_espada, 3_copa, 1_espada]
-TRUCO_OPONENTE [12_basto, 11_diamante]
+TRUCO_JUGADOR [7_espada, 6_espada, 3_copa]
+TRUCO_OPONENTE [1_espada, 3_oro, 3_espada]
 TRUCO_MESA_JUGADOR []
-TRUCO_MESA_OPONENTE [1_hembra]
+TRUCO_MESA_OPONENTE []
 
 PREDECIR jugada
