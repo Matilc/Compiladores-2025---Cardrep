@@ -1,0 +1,163 @@
+COMPILER Cardrep
+
+CHARACTERS
+  letter = 'A'..'Z' + 'a'..'z'.
+  digit = '0'..'9'.
+  
+TOKENS
+  ident = letter {letter | digit}.
+  number = digit {digit}.
+
+IGNORE '\r' + '\n' + '\t' + ' '
+
+PRODUCTIONS
+
+Cardrep = 
+  "JUEGO" ident              (. gameType = wcharToString(t->val); 
+                                 intermediateCode.emitGame(gameType); .)
+  Estado
+  "PREDECIR" "jugada"        (. intermediateCode.emitHalt(); .)
+  .
+
+Estado =
+  (
+    EstadoBlackjack |
+    EstadoTruco
+  )
+  .
+
+// ========== BLACKJACK ==========
+EstadoBlackjack =
+  "BLACKJACK_JUGADOR" "[" ListaCartasJugador "]"
+                             (. if (playerCards.size() < 2) {
+                                    SemErr(L"El jugador debe tener al menos 2 cartas");
+                                }
+                                if (playerCards.size() > 11) {
+                                    SemErr(L"El jugador no puede tener más de 11 cartas");
+                                } 
+                             .)
+  "BLACKJACK_DEALER" "[" ListaCartasDealer "]"
+                             (. if (dealerCards.size() < 1) {
+                                    SemErr(L"El dealer debe tener al menos 1 carta");
+                                }
+                             .)
+  .
+
+ListaCartasJugador = 
+  CartaJugador {"," CartaJugador}
+  .
+
+ListaCartasDealer = 
+  CartaDealer
+  .
+
+CartaJugador = 
+  ValorCarta                 (. std::string valor = wcharToString(t->val); .)
+  "_" 
+  ident                      (. std::string palo = wcharToString(t->val); 
+                                 std::string carta = valor + "_" + palo;
+                                 playerCards.push_back(carta);
+                                 intermediateCode.emitLoadPlayer(carta); .)
+  .
+
+CartaDealer = 
+  ValorCarta                 (. std::string valor = wcharToString(t->val); .)
+  "_" 
+  ident                      (. std::string palo = wcharToString(t->val); 
+                                 std::string carta = valor + "_" + palo;
+                                 dealerCards.push_back(carta);
+                                 intermediateCode.emitLoadDealer(carta); .)
+  .
+
+// ========== TRUCO ==========
+EstadoTruco = 
+  "TRUCO_JUGADOR" "[" ListaCartasTrucoJugador "]"
+                             (. if (playerCards.empty()) {
+                                    SemErr(L"El jugador debe tener al menos 1 carta");
+                                }
+                                if (playerCards.size() > 3) {
+                                    SemErr(L"El jugador no puede tener más de 3 cartas");
+                                } 
+                             .)
+  "TRUCO_MESA_JUGADOR" "[" ListaCartasMesaJugador "]"
+  "TRUCO_MESA_OPONENTE" "[" ListaCartasMesaOponente "]"
+                             (. // Validación: coherencia de mesas y manos
+                                if (mesaJugadorCards.size() > 3) {
+                                    SemErr(L"No se pueden jugar más de 3 cartas en la mesa");
+                                }
+                                if (mesaOponenteCards.size() > 3) {
+                                    SemErr(L"El oponente no puede jugar más de 3 cartas");
+                                }
+                                
+                                // Total cartas (mano + mesa) debe ser <= 3
+                                size_t totalJugador = playerCards.size() + mesaJugadorCards.size();
+                                if (totalJugador > 3) {
+                                    SemErr(L"Total cartas jugador (mano + mesa) excede 3");
+                                }
+                              
+                                
+                                // Diferencia de rondas máxima 1
+                                int diff = abs((int)mesaJugadorCards.size() - (int)mesaOponenteCards.size());
+                                if (diff > 1) {
+                                    SemErr(L"Diferencia de cartas jugadas debe ser máximo 1");
+                                }
+                                
+                                // Las cartas en mesa no pueden estar en mano
+                                std::set<std::string> cartasMano;
+                                for (const auto& c : playerCards) cartasMano.insert(c);
+                                for (const auto& c : mesaJugadorCards) {
+                                    if (cartasMano.count(c)) {
+                                        std::wstring msg = L"Carta en mesa también está en mano: ";
+                                        std::wstring cardW(c.begin(), c.end());
+                                        msg += cardW;
+                                        SemErr(msg.c_str());
+                                    }
+                                }
+                             .)
+  .
+
+ListaCartasTrucoJugador =
+  CartaTrucoJugador {"," CartaTrucoJugador}
+  .
+
+ListaCartasMesaJugador =
+  [CartaMesaJugador {"," CartaMesaJugador}]
+  .
+
+ListaCartasMesaOponente =
+  [CartaMesaOponente {"," CartaMesaOponente}]
+  .
+
+CartaTrucoJugador = 
+  ValorCarta                 (. std::string valor = wcharToString(t->val); .)
+  "_" 
+  ident                      (. std::string palo = wcharToString(t->val); 
+                                 std::string carta = valor + "_" + palo;
+                                 playerCards.push_back(carta);
+                                 intermediateCode.emitLoadPlayer(carta); .)
+  .
+
+CartaMesaJugador = 
+  ValorCarta                 (. std::string valor = wcharToString(t->val); .)
+  "_" 
+  ident                      (. std::string palo = wcharToString(t->val); 
+                                 std::string carta = valor + "_" + palo;
+                                 mesaJugadorCards.push_back(carta);
+                                 intermediateCode.emitLoadMesaPlayer(carta); .)
+  .
+
+CartaMesaOponente = 
+  ValorCarta                 (. std::string valor = wcharToString(t->val); .)
+  "_" 
+  ident                      (. std::string palo = wcharToString(t->val); 
+                                 std::string carta = valor + "_" + palo;
+                                 mesaOponenteCards.push_back(carta);
+                                 intermediateCode.emitLoadMesaOpponent(carta); .)
+  .
+
+// ========== COMÚN ==========
+ValorCarta = 
+  number | ident
+  .
+
+END Cardrep.

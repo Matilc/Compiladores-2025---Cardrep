@@ -1,0 +1,7 @@
+JUEGO Truco
+
+TRUCO_JUGADOR [4_espada, 3_basto, 3_oro]
+TRUCO_MESA_JUGADOR [4_espada]
+TRUCO_MESA_OPONENTE [6_espada]
+
+PREDECIR jugada
