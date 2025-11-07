@@ -65,9 +65,11 @@ void Parser::Cardrep() {
 		Expect(3 /* "JUEGO" */);
 		Expect(_ident);
 		gameType = wcharToString(t->val); 
+		intermediateCode.emitGame(gameType); 
 		Estado();
 		Expect(4 /* "PREDECIR" */);
 		Expect(5 /* "jugada" */);
+		intermediateCode.emitHalt(); 
 }
 
 void Parser::Estado() {
@@ -75,7 +77,7 @@ void Parser::Estado() {
 			EstadoBlackjack();
 		} else if (la->kind == 12 /* "TRUCO_JUGADOR" */) {
 			EstadoTruco();
-		} else SynErr(17);
+		} else SynErr(16);
 }
 
 void Parser::EstadoBlackjack() {
@@ -83,10 +85,21 @@ void Parser::EstadoBlackjack() {
 		Expect(7 /* "[" */);
 		ListaCartasJugador();
 		Expect(8 /* "]" */);
+		if (playerCards.size() < 2) {
+		   SemErr(L"El jugador debe tener al menos 2 cartas");
+		}
+		if (playerCards.size() > 11) {
+		   SemErr(L"El jugador no puede tener más de 11 cartas");
+		} 
+		
 		Expect(9 /* "BLACKJACK_DEALER" */);
 		Expect(7 /* "[" */);
 		ListaCartasDealer();
 		Expect(8 /* "]" */);
+		if (dealerCards.size() < 1) {
+		   SemErr(L"El dealer debe tener al menos 1 carta");
+		}
+		
 }
 
 void Parser::EstadoTruco() {
@@ -94,18 +107,53 @@ void Parser::EstadoTruco() {
 		Expect(7 /* "[" */);
 		ListaCartasTrucoJugador();
 		Expect(8 /* "]" */);
-		Expect(13 /* "TRUCO_OPONENTE" */);
-		Expect(7 /* "[" */);
-		ListaCartasTrucoOponente();
-		Expect(8 /* "]" */);
-		Expect(14 /* "TRUCO_MESA_JUGADOR" */);
+		if (playerCards.empty()) {
+		   SemErr(L"El jugador debe tener al menos 1 carta");
+		}
+		if (playerCards.size() > 3) {
+		   SemErr(L"El jugador no puede tener más de 3 cartas");
+		} 
+		
+		Expect(13 /* "TRUCO_MESA_JUGADOR" */);
 		Expect(7 /* "[" */);
 		ListaCartasMesaJugador();
 		Expect(8 /* "]" */);
-		Expect(15 /* "TRUCO_MESA_OPONENTE" */);
+		Expect(14 /* "TRUCO_MESA_OPONENTE" */);
 		Expect(7 /* "[" */);
 		ListaCartasMesaOponente();
 		Expect(8 /* "]" */);
+		if (mesaJugadorCards.size() > 3) {
+		   SemErr(L"No se pueden jugar más de 3 cartas en la mesa");
+		}
+		if (mesaOponenteCards.size() > 3) {
+		   SemErr(L"El oponente no puede jugar más de 3 cartas");
+		}
+		
+		// Total cartas (mano + mesa) debe ser <= 3
+		size_t totalJugador = playerCards.size() + mesaJugadorCards.size();
+		if (totalJugador > 3) {
+		   SemErr(L"Total cartas jugador (mano + mesa) excede 3");
+		}
+		
+		
+		// Diferencia de rondas máxima 1
+		int diff = abs((int)mesaJugadorCards.size() - (int)mesaOponenteCards.size());
+		if (diff > 1) {
+		   SemErr(L"Diferencia de cartas jugadas debe ser máximo 1");
+		}
+		
+		// Las cartas en mesa no pueden estar en mano
+		std::set<std::string> cartasMano;
+		for (const auto& c : playerCards) cartasMano.insert(c);
+		for (const auto& c : mesaJugadorCards) {
+		   if (cartasMano.count(c)) {
+		       std::wstring msg = L"Carta en mesa también está en mano: ";
+		       std::wstring cardW(c.begin(), c.end());
+		       msg += cardW;
+		       SemErr(msg.c_str());
+		   }
+		}
+		
 }
 
 void Parser::ListaCartasJugador() {
@@ -118,10 +166,6 @@ void Parser::ListaCartasJugador() {
 
 void Parser::ListaCartasDealer() {
 		CartaDealer();
-		while (la->kind == 10 /* "," */) {
-			Get();
-			CartaDealer();
-		}
 }
 
 void Parser::CartaJugador() {
@@ -130,7 +174,9 @@ void Parser::CartaJugador() {
 		Expect(11 /* "_" */);
 		Expect(_ident);
 		std::string palo = wcharToString(t->val); 
-		playerCards.push_back(valor + "_" + palo); 
+		std::string carta = valor + "_" + palo;
+		playerCards.push_back(carta);
+		intermediateCode.emitLoadPlayer(carta); 
 }
 
 void Parser::CartaDealer() {
@@ -139,7 +185,9 @@ void Parser::CartaDealer() {
 		Expect(11 /* "_" */);
 		Expect(_ident);
 		std::string palo = wcharToString(t->val); 
-		dealerCards.push_back(valor + "_" + palo); 
+		std::string carta = valor + "_" + palo;
+		dealerCards.push_back(carta);
+		intermediateCode.emitLoadDealer(carta); 
 }
 
 void Parser::ValorCarta() {
@@ -147,7 +195,7 @@ void Parser::ValorCarta() {
 			Get();
 		} else if (la->kind == _ident) {
 			Get();
-		} else SynErr(18);
+		} else SynErr(17);
 }
 
 void Parser::ListaCartasTrucoJugador() {
@@ -155,14 +203,6 @@ void Parser::ListaCartasTrucoJugador() {
 		while (la->kind == 10 /* "," */) {
 			Get();
 			CartaTrucoJugador();
-		}
-}
-
-void Parser::ListaCartasTrucoOponente() {
-		CartaTrucoOponente();
-		while (la->kind == 10 /* "," */) {
-			Get();
-			CartaTrucoOponente();
 		}
 }
 
@@ -192,16 +232,9 @@ void Parser::CartaTrucoJugador() {
 		Expect(11 /* "_" */);
 		Expect(_ident);
 		std::string palo = wcharToString(t->val); 
-		playerCards.push_back(valor + "_" + palo); 
-}
-
-void Parser::CartaTrucoOponente() {
-		ValorCarta();
-		std::string valor = wcharToString(t->val); 
-		Expect(11 /* "_" */);
-		Expect(_ident);
-		std::string palo = wcharToString(t->val); 
-		opponentCards.push_back(valor + "_" + palo); 
+		std::string carta = valor + "_" + palo;
+		playerCards.push_back(carta);
+		intermediateCode.emitLoadPlayer(carta); 
 }
 
 void Parser::CartaMesaJugador() {
@@ -210,7 +243,9 @@ void Parser::CartaMesaJugador() {
 		Expect(11 /* "_" */);
 		Expect(_ident);
 		std::string palo = wcharToString(t->val); 
-		mesaJugadorCards.push_back(valor + "_" + palo); 
+		std::string carta = valor + "_" + palo;
+		mesaJugadorCards.push_back(carta);
+		intermediateCode.emitLoadMesaPlayer(carta); 
 }
 
 void Parser::CartaMesaOponente() {
@@ -219,7 +254,9 @@ void Parser::CartaMesaOponente() {
 		Expect(11 /* "_" */);
 		Expect(_ident);
 		std::string palo = wcharToString(t->val); 
-		mesaOponenteCards.push_back(valor + "_" + palo); 
+		std::string carta = valor + "_" + palo;
+		mesaOponenteCards.push_back(carta);
+		intermediateCode.emitLoadMesaOpponent(carta); 
 }
 
 
@@ -323,7 +360,7 @@ void Parser::Parse() {
 }
 
 Parser::Parser(Scanner *scanner) {
-	maxT = 16;
+	maxT = 15;
 
 	ParserInitCaller<Parser>::CallInit(this);
 	dummyToken = NULL;
@@ -338,8 +375,8 @@ bool Parser::StartOf(int s) {
 	const bool T = true;
 	const bool x = false;
 
-	static bool set[1][18] = {
-		{T,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x}
+	static bool set[1][17] = {
+		{T,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x}
 	};
 
 
@@ -373,12 +410,11 @@ void Errors::SynErr(int line, int col, int n) {
 			case 10: s = coco_string_create(L"\",\" expected"); break;
 			case 11: s = coco_string_create(L"\"_\" expected"); break;
 			case 12: s = coco_string_create(L"\"TRUCO_JUGADOR\" expected"); break;
-			case 13: s = coco_string_create(L"\"TRUCO_OPONENTE\" expected"); break;
-			case 14: s = coco_string_create(L"\"TRUCO_MESA_JUGADOR\" expected"); break;
-			case 15: s = coco_string_create(L"\"TRUCO_MESA_OPONENTE\" expected"); break;
-			case 16: s = coco_string_create(L"??? expected"); break;
-			case 17: s = coco_string_create(L"invalid Estado"); break;
-			case 18: s = coco_string_create(L"invalid ValorCarta"); break;
+			case 13: s = coco_string_create(L"\"TRUCO_MESA_JUGADOR\" expected"); break;
+			case 14: s = coco_string_create(L"\"TRUCO_MESA_OPONENTE\" expected"); break;
+			case 15: s = coco_string_create(L"??? expected"); break;
+			case 16: s = coco_string_create(L"invalid Estado"); break;
+			case 17: s = coco_string_create(L"invalid ValorCarta"); break;
 
 		default:
 		{

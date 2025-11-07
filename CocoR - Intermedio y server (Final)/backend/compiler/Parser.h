@@ -8,6 +8,8 @@
 #include "Scanner.h"
 #include <vector>
 #include <string>
+#include <set>
+#include "IntermediateCode.h"
 
 std::string wcharToString(const wchar_t* wstr);
 
@@ -78,11 +80,9 @@ public:
 	void CartaDealer();
 	void ValorCarta();
 	void ListaCartasTrucoJugador();
-	void ListaCartasTrucoOponente();
 	void ListaCartasMesaJugador();
 	void ListaCartasMesaOponente();
 	void CartaTrucoJugador();
-	void CartaTrucoOponente();
 	void CartaMesaJugador();
 	void CartaMesaOponente();
 
